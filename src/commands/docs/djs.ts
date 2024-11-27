@@ -1,12 +1,18 @@
 import { Command } from "../../interfaces";
-import { SlashCommandBuilder } from "@discordjs/builders";
 import Doc, { sources } from "discord.js-docs";
-import { checkEmbedLimits } from "../../utils/EmbedUtils";
-import { deleteButton } from "../../utils/CommandUtils";
-import { MessageActionRow, MessageSelectMenu } from "discord.js";
-import type { APIEmbed } from "discord-api-types";
+import { checkEmbedLimits } from "../../utils/EmbedUtils.js";
+import { deleteButton } from "../../utils/CommandUtils.js";
+import { 
+    ActionRowBuilder, 
+    StringSelectMenuBuilder,
+    SlashCommandBuilder
+} from "discord.js";
+import { APIEmbed, ButtonBuilder } from "discord.js";
 
-const supportedBranches = Object.keys(sources).map((branch) => [capitalize(branch), branch] as [string, string]);
+const supportedBranches = Object.keys(sources).map((branch) => ({
+    name: capitalize(branch),
+    value: branch
+}))
 
 const command: Command = {
     slashCommand: {
@@ -38,20 +44,22 @@ const command: Command = {
                     .setRequired(false),
             ),
         async run(interaction) {
-            const deleteButtonRow = new MessageActionRow().addComponents([deleteButton(interaction.user.id)]);
-            const queryOption = interaction.options.getString("query");
-            const sourceOption = interaction.options.getString("source") as keyof typeof sources;
+            const deleteButtonComponent = deleteButton(interaction.user.id)
+            const deleteButtonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(deleteButtonComponent);
+            const queryOption = interaction.options.get("query")?.value as string;
+            const sourceOption = interaction.options.get("source") as unknown as keyof typeof sources;
 
             // Support the source:Query format
             let { Source: source = "stable", Query: query } =
                 queryOption.match(/(?:(?<Source>[^:]*):)?(?<Query>(?:.|\s)*)/i)?.groups ?? {};
+
             // The Default source should be stable
             if (!sources[source]) source = "stable";
 
             if (sourceOption) source = sourceOption;
             // Whether to include private elements on the search results, by default false, shows private elements if the search returns an exact result;
-            const searchPrivate = interaction.options.getBoolean("private") || false;
-            const doc = await Doc.fetch(source, { force: true }).catch(console.error);
+            const searchPrivate = interaction.options.get("private") as unknown as boolean || false;
+            const doc = await Doc.docFetch(source, { force: true }).catch(console.error);
 
             if (!doc) {
                 await interaction.editReply({ content: "Couldn't fetch docs" }).catch(console.error);
@@ -66,15 +74,15 @@ const command: Command = {
 
                 const timeStampDate = new Date(notFoundEmbed.timestamp);
                 // Satisfies the method's MessageEmbedOption type
-                const embedObj = { ...notFoundEmbed, timestamp: timeStampDate };
+                const embedObj = { ...notFoundEmbed, timestamp: timeStampDate.toLocaleDateString() };
 
                 await interaction.editReply({ embeds: [embedObj] }).catch(console.error);
                 return;
             } else if (Array.isArray(result)) {
                 // If there are multiple results, send a select menu from which the user can choose which one to send
 
-                const selectMenuRow = new MessageActionRow().addComponents(
-                    new MessageSelectMenu()
+                const selectMenuRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+                    new StringSelectMenuBuilder()
                         .setCustomId(`djsselect/${source}/${searchPrivate}/${interaction.user.id}`)
                         .addOptions(result)
                         .setPlaceholder("Select documentation to send"),
@@ -90,16 +98,19 @@ const command: Command = {
             const resultEmbed = result;
             const timeStampDate = new Date(resultEmbed.timestamp);
             const embedObj = { ...resultEmbed, timestamp: timeStampDate };
+            const sendableQuery = query.length >= 100 ? `${query.slice(0, 100)}...` : query
 
-            //! "checkEmbedLimits" does not support MessageEmbed objects due to the properties being null by default, use a raw embed object for this method
-            // Check if the embed exceeds any of the limits
+            //! "checkEmbedLimits" does not support MessageEmbed objects due to 
+            // the properties being null by default, use a raw embed object for 
+            // this method Check if the embed exceeds any of the limits
             if (!checkEmbedLimits([resultEmbed])) {
                 // The final field should be the View Source button
                 embedObj.fields = [embedObj.fields?.at(-1)];
             }
             await interaction.editReply({
-                content: "Sent documentations for " + (query.length >= 100 ? query.slice(0, 100) + "..." : query),
+                content: `Sent documentations for ${sendableQuery}`,
             });
+            // @ts-expect-error
             await interaction.followUp({ embeds: [embedObj], components: [deleteButtonRow] }).catch(console.error);
             return;
         },
@@ -110,58 +121,19 @@ const command: Command = {
             async run(interaction) {
                 const selectedValue = interaction.values[0];
                 const [, source, searchPrivate, Initiator] = interaction.customId.split("/");
-                const deleteButtonRow = new MessageActionRow().addComponents([deleteButton(Initiator)]);
+                const deleteButtonRow = new ActionRowBuilder<ButtonBuilder>().addComponents([deleteButton(Initiator)]);
 
-                const doc = await Doc.fetch(source, { force: true });
+                const doc = await Doc.docFetch(source, { force: true });
 
                 const resultEmbed = searchDJSDoc(doc, selectedValue, searchPrivate === "true") as APIEmbed;
 
                 // Remove the menu and update the ephemeral message
                 await interaction
-                    .editReply({ content: "Sent documentations for " + selectedValue, components: [] })
+                    .editReply({ content: `Sent documentations for ${selectedValue}`, components: [] })
                     .catch(console.error);
                 // Send documentation
                 await interaction
                     .followUp({ embeds: [resultEmbed], components: [deleteButtonRow] })
-                    .catch(console.error);
-            },
-        },
-    ],
-    autocomplete: [
-        {
-            focusedOption: "query",
-            async run(interaction, focusedOption) {
-                const focusedOptionValue = focusedOption.value as string;
-                // Support source:query format
-                let { Branch: branchOrProject = "stable", Query: query } =
-                    focusedOptionValue.match(/(?:(?<Branch>[^:]*):)?(?<Query>(?:.|\s)*)/i)?.groups ?? {};
-                if (!sources[branchOrProject]) branchOrProject = "stable";
-
-                const doc = await Doc.fetch(branchOrProject, { force: false });
-                const singleElement = doc.get(...query.split(/\.|#/));
-                if (singleElement) {
-                    await interaction
-                        .respond([
-                            {
-                                name: singleElement.formattedName,
-                                value: branchOrProject + ":" + singleElement.formattedName,
-                            },
-                        ])
-                        .catch(console.error);
-                    return;
-                }
-                const searchResults = doc.search(query, { excludePrivateElements: false, maxResults: 25 });
-                if (!searchResults) {
-                    await interaction.respond([]).catch(console.error);
-                    return;
-                }
-                await interaction
-                    .respond(
-                        searchResults.map((elem) => ({
-                            name: elem.formattedName,
-                            value: branchOrProject + ":" + elem.formattedName,
-                        })),
-                    )
                     .catch(console.error);
             },
         },
@@ -171,7 +143,7 @@ const command: Command = {
 function capitalize(str: string) {
     return str
         .split("-")
-        .map((splitStr) => splitStr[0].toUpperCase() + splitStr.substring(1))
+        .map((splitStr) => `${splitStr[0].toUpperCase()}${splitStr.substring(1)}`)
         .join("-");
 }
 
@@ -190,7 +162,7 @@ export function searchDJSDoc(doc: Doc, query: string, searchPrivate?: boolean) {
     return searchResults.map((res) => {
         const parsedDescription = res.description?.trim?.() ?? "No description provided";
         // Labels and values have a limit of 100 characters
-        const description = parsedDescription.length >= 99 ? parsedDescription.slice(0, 96) + "..." : parsedDescription;
+        const description = parsedDescription.length >= 99 ? `${parsedDescription.slice(0, 96)}...` : parsedDescription;
         return {
             label: res.formattedName,
             description,

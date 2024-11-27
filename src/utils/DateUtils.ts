@@ -46,6 +46,6 @@ export function intervalObjToStr(int: Record<formats, number> | number | Date) {
     return (["month", "day", "hour", "minute", "second"] as formats[]).reduce((acc, format) => {
         const formatted = formatStr(format);
         if (!acc) return formatted;
-        return formatted ? acc + ", " + formatted : acc;
+        return formatted ? `${acc}, ${formatted}` : acc;
     }, "");
 }

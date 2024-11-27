@@ -1,13 +1,17 @@
-import { commandCooldownCheck, commandPermissionCheck } from "../utils/CommandUtils";
-import glob from "glob";
-import type { Command, MyContext } from "../interfaces";
+import { commandCooldownCheck, commandPermissionCheck } from "../utils/CommandUtils.js";
+import { glob } from "glob";
+import type { Command, MyContext } from "../interfaces.js";
 import type {
-    AutocompleteInteraction,
     ButtonInteraction,
     CommandInteraction,
     Interaction,
-    SelectMenuInteraction,
+    StringSelectMenuInteraction,
 } from "discord.js";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export async function interactionCreateHandler(context: MyContext, interaction: Interaction<"cached">) {
     try {
@@ -15,10 +19,8 @@ export async function interactionCreateHandler(context: MyContext, interaction: 
             await commandInteractionHandler(context, interaction);
         } else if (interaction.isButton()) {
             await buttonInteractionHandler(context, interaction);
-        } else if (interaction.isSelectMenu()) {
+        } else if (interaction.isStringSelectMenu()) {
             await selectMenuInteractionHandler(context, interaction);
-        } else if (interaction.isAutocomplete()) {
-            await autocompleteInteractionHandler(context, interaction);
         }
     } catch (e) {
         console.error(e);
@@ -33,7 +35,7 @@ export function loadCommands(context: MyContext) {
     // Promisifies the process of glob
     return new Promise((resolve) => {
         // Find all js files
-        glob(`${__dirname}/../commands/**/*.js`, async (err, files) => {
+        glob(`${__dirname}/../commands/**/*.js`).then(async (files) => {
             await Promise.all(
                 files.map(async (file) => {
                     const { default: myCommandFile }: { default: Command } = await import(file).catch((err) => {
@@ -42,13 +44,7 @@ export function loadCommands(context: MyContext) {
                         return {};
                     });
                     if (!myCommandFile) return;
-                    const { autocomplete, buttons, selectMenus, slashCommand } = myCommandFile;
-                    autocomplete?.forEach((autocom) =>
-                        context.commands.autocompletes.set(
-                            myCommandFile.slashCommand?.data.name + "/" + autocom.focusedOption,
-                            autocom,
-                        ),
-                    );
+                    const { buttons, selectMenus, slashCommand } = myCommandFile;
                     buttons?.forEach((button) => context.commands.buttons.set(button.custom_id, button));
                     selectMenus?.forEach((selectMenu) =>
                         context.commands.selectMenus.set(selectMenu.custom_id, selectMenu),
@@ -89,7 +85,7 @@ async function buttonInteractionHandler(context: MyContext, interaction: ButtonI
         ephemeral: true,
     }).catch(console.error);
 }
-async function selectMenuInteractionHandler(context: MyContext, interaction: SelectMenuInteraction<"cached">) {
+async function selectMenuInteractionHandler(context: MyContext, interaction: StringSelectMenuInteraction<"cached">) {
     await interaction.deferUpdate().catch(console.error);
 
     const menuId = interaction.customId.split("/")[0];
@@ -102,10 +98,4 @@ async function selectMenuInteractionHandler(context: MyContext, interaction: Sel
         content: "Unknown menu",
         ephemeral: true,
     }).catch(console.error);
-}
-
-async function autocompleteInteractionHandler(context: MyContext, interaction: AutocompleteInteraction<"cached">) {
-    const focusedOption = interaction.options.getFocused(true);
-    const autocom = context.commands.autocompletes.get(interaction.commandName + "/" + focusedOption.name);
-    if (autocom) await autocom.run(interaction, focusedOption, context).catch(console.error);
 }

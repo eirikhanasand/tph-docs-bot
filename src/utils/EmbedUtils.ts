@@ -1,4 +1,4 @@
-import type { APIEmbed } from "discord-api-types";
+import type { APIEmbed } from "discord.js";
 
 const limits = {
     title: 256,
@@ -12,10 +12,12 @@ const limits = {
     maxEmbeds: 10,
     allCombinedEmbed: 6000,
 };
+
 /**
  * Sanity check the passed embeds for exceeding any limit
  * @param embeds
- * @param error Whether to error should a limit be exceeded, if not return a boolean, false if it exceeds a limit
+ * @param error Whether to error should a limit be exceeded, if not return a 
+ *              boolean, false if it exceeds a limit
  * @returns
  */
 export function checkEmbedLimits(embeds: APIEmbed[], error = false) {

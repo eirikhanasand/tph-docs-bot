@@ -1,18 +1,29 @@
-import { Permissions, Formatters, MessageButton } from "discord.js";
-import type { CommandInteraction, Snowflake, ButtonInteraction, Message } from "discord.js";
 import type { Command, MyContext } from "../interfaces";
+import type { 
+    CommandInteraction,
+    Snowflake,
+    ButtonInteraction,
+    Message
+} from "discord.js";
+import {
+    ButtonBuilder,
+    ButtonStyle,
+    PermissionsBitField,
+    time
+} from "discord.js";
 
 export const deleteButton = (initiatorId: Snowflake) =>
-    new MessageButton()
-        .setCustomId("deletebtn/" + initiatorId)
+    new ButtonBuilder()
+        .setCustomId(`deletebtn/${initiatorId}`)
         .setEmoji("🗑")
-        .setStyle("SECONDARY");
+        .setStyle(ButtonStyle.Secondary);
 
 export const deleteButtonHandler = async (interaction: ButtonInteraction<"cached">) => {
     const commandInitiatorId = interaction.customId.replace("deletebtn/", "");
+
     // If the button clicker is the command initiator
     if (interaction.user.id === commandInitiatorId) {
-        (interaction.message as Message).delete().catch(console.error);
+        (interaction.message as Message).delete().catch(console.error);   
     } else
         await interaction
             .reply({
@@ -32,9 +43,11 @@ export function commandPermissionCheck(interaction: CommandInteraction, command:
     const { client, user, channel } = interaction;
     // If the channel is a dm
     // if it's a partial, channel.type wouldn't exist
-    if (channel.type === "DM" || !channel) {
+    if (!channel || (channel.isDMBased && channel.isDMBased())) {
         if (command.guildOnly) {
-            interaction.editReply("This is a guild exclusive command, not to be executed in a dm").catch(console.error);
+            interaction.editReply(
+                "This is a guild exclusive command, not to be executed in a dm"
+            ).catch(console.error);
             // For guild only commands that were executed in a dm, cancel the command
             return true;
         }
@@ -42,7 +55,7 @@ export function commandPermissionCheck(interaction: CommandInteraction, command:
         return false;
     }
     if (command.botPermissions) {
-        const botPermissions = new Permissions(command.botPermissions);
+        const botPermissions = new PermissionsBitField(command.botPermissions);
         // The required permissions for the bot to run the command, missing in the channel.
         const missingPermissions = channel.permissionsFor(client.user).missing(botPermissions);
         if (missingPermissions.length > 0) {
@@ -57,7 +70,7 @@ export function commandPermissionCheck(interaction: CommandInteraction, command:
         }
     }
     if (command.authorPermissions) {
-        const authorPermissions = new Permissions(command.authorPermissions);
+        const authorPermissions = new PermissionsBitField(command.authorPermissions);
         // The required permissions for the user to run the command, missing in the channel.
         const missingPermissions = channel.permissionsFor(user.id).missing(authorPermissions);
         if (missingPermissions.length > 0) {
@@ -77,7 +90,7 @@ export function commandPermissionCheck(interaction: CommandInteraction, command:
 export function commandCooldownCheck(interaction: CommandInteraction, command: Command["slashCommand"], context: MyContext): boolean {
     const { user } = interaction;
     if (command.cooldown) {
-        const id = user.id + "/" + interaction.commandName;
+        const id = `${user.id}/${interaction.commandName}`;
         const existingCooldown = context.cooldownCounter.get(id);
         if (existingCooldown) {
             if (Date.now() >= existingCooldown) {
@@ -87,12 +100,12 @@ export function commandCooldownCheck(interaction: CommandInteraction, command: C
             interaction
                 .editReply(
                     //TODO revert to using custom logic to send remaining time as the discord timestamp formatting isn't very descriptive
-                    `Please wait ${Formatters.time(existingCooldown, "R")} before using the command again`,
+                    `Please wait ${time(existingCooldown, "R")} before using the command again`,
                 )
                 .catch(console.error);
             return true;
         }
-        context.cooldownCounter.set(user.id + "/" + interaction.commandName, Date.now() + command.cooldown);
+        context.cooldownCounter.set(`user.id / ${interaction.commandName}`, Date.now() + command.cooldown);
     }
     return false;
 }

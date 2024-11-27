@@ -2,18 +2,19 @@ import type {
     Client,
     CommandInteraction,
     Collection,
-    PermissionString,
+    PermissionFlagsBits,
     ButtonInteraction,
-    SelectMenuInteraction,
-    AutocompleteInteraction,
-    ApplicationCommandOptionChoice,
+    StringSelectMenuInteraction,
+    APIApplicationCommandOptionChoice,
 } from "discord.js";
-import type { SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder } from "@discordjs/builders";
+import type {
+    SlashCommandBuilder,
+    SlashCommandSubcommandsOnlyBuilder
+} from "discord.js"
 type SlashCommandOptionsType = ReturnType<SlashCommandBuilder["addChannelOption"]>;
 export interface MyContext {
     client: Client;
     commands: {
-        autocompletes: Collection<string, Command["autocomplete"][number]>;
         buttons: Collection<string, Command["buttons"][number]>;
         selectMenus: Collection<string, Command["selectMenus"][number]>;
         slashCommands: Collection<string, Command["slashCommand"]>;
@@ -25,23 +26,22 @@ export interface Command {
         data: SlashCommandBuilder | SlashCommandSubcommandsOnlyBuilder | SlashCommandOptionsType;
         cooldown?: number;
         // * Note that as of writing, slash commands use the permissions for @everyone
-        botPermissions?: PermissionString[];
-        authorPermissions?: PermissionString[];
+        botPermissions?: (keyof typeof PermissionFlagsBits)[];
+        authorPermissions?: (keyof typeof PermissionFlagsBits)[];
         guildOnly?: boolean;
         run(interaction: CommandInteraction, context: MyContext): Promise<void>;
     };
     buttons?: { custom_id: string; run(interaction: ButtonInteraction<"cached">, context: MyContext): Promise<void> }[];
     selectMenus?: {
         custom_id: string;
-        run(interaction: SelectMenuInteraction<"cached">, context: MyContext): Promise<void>;
+        run(interaction: StringSelectMenuInteraction<"cached">, context: MyContext): Promise<void>;
     }[];
     autocomplete?: {
         focusedOption: string;
         run(
-            interaction: AutocompleteInteraction<"cached">,
-            focusedOption: ApplicationCommandOptionChoice,
+            focusedOption: APIApplicationCommandOptionChoice,
             context: MyContext,
-        ): Promise<void>;
+        ): Promise<void>;e
     }[];
 }
 export interface MdnDoc {

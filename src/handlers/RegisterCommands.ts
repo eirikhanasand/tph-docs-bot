@@ -1,7 +1,11 @@
 import "dotenv/config";
-import { REST } from "@discordjs/rest";
-import { Routes } from "discord-api-types/v9";
-import glob from "glob";
+import { sync } from "glob";
+import { Routes, REST } from "discord.js";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const {
     APPLICATIONID: applicationId,
@@ -22,7 +26,7 @@ if (["GUILD", "RESET_GUILD"].includes(registerMode) && !guildId)
     throw new Error("The target's guild id is needed but was not provided");
 
 const commands = [];
-const commandFiles = glob.sync(`${__dirname}/../commands/**/*.js`);
+const commandFiles = sync(`${__dirname}/../commands/**/*.js`);
 const rest = new REST({ version: "9" }).setToken(token);
 
 (async function () {
