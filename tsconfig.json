@@ -3,7 +3,7 @@
     "outDir": "dist",
     "noImplicitAny": false,
     "module": "commonjs",
-    "target": "es2017",
+    "target": "ES2023",
     "lib": ["es7", "DOM"],
     "moduleResolution": "node",
     "baseUrl": "./src",
