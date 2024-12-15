@@ -1,15 +1,15 @@
 import type {
-	Client,
-	CommandInteraction,
-	Collection,
-	PermissionFlagsBits,
-	ButtonInteraction,
-	StringSelectMenuInteraction,
-	APIApplicationCommandOptionChoice,
+    Client,
+    CommandInteraction,
+    Collection,
+    PermissionFlagsBits,
+    ButtonInteraction,
+    StringSelectMenuInteraction,
+    APIApplicationCommandOptionChoice,
 } from "discord.js";
 import type {
-	SlashCommandBuilder,
-	SlashCommandSubcommandsOnlyBuilder
+    SlashCommandBuilder,
+    SlashCommandSubcommandsOnlyBuilder
 } from "discord.js";
 type SlashCommandOptionsType = ReturnType<SlashCommandBuilder["addChannelOption"]>;
 export interface MyContext {

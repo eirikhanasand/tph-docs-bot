@@ -23,7 +23,7 @@ export default [
 			'yoda': 'error',
 			'@stylistic/js/indent': [
 				'error',
-				'tab',
+				4,
 			],
 			'@stylistic/js/linebreak-style': [
 				'error',
