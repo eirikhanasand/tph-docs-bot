@@ -1,16 +1,16 @@
 import type {
-    Client,
-    CommandInteraction,
-    Collection,
-    PermissionFlagsBits,
-    ButtonInteraction,
-    StringSelectMenuInteraction,
-    APIApplicationCommandOptionChoice,
+	Client,
+	CommandInteraction,
+	Collection,
+	PermissionFlagsBits,
+	ButtonInteraction,
+	StringSelectMenuInteraction,
+	APIApplicationCommandOptionChoice,
 } from "discord.js";
 import type {
-    SlashCommandBuilder,
-    SlashCommandSubcommandsOnlyBuilder
-} from "discord.js"
+	SlashCommandBuilder,
+	SlashCommandSubcommandsOnlyBuilder
+} from "discord.js";
 type SlashCommandOptionsType = ReturnType<SlashCommandBuilder["addChannelOption"]>;
 export interface MyContext {
     client: Client;
@@ -41,7 +41,7 @@ export interface Command {
         run(
             focusedOption: APIApplicationCommandOptionChoice,
             context: MyContext,
-        ): Promise<void>;e
+        ): Promise<void>;
     }[];
 }
 export interface MdnDoc {
