@@ -11,10 +11,9 @@ import {
 } from "discord.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-import { MDN_BASE_URL, MDN_DOCS_URL, MDN_SITEMAP } from "../constants.js";
-import { XMLParser } from "fast-xml-parser";
 import flexsearch from "flexsearch";
 import Doc from "discord.js-docs";
+import { MDNAutocomplete } from "../commands/docs/mdn.js";
 
 interface SitemapEntry<T extends string | number> {
     loc: string;
@@ -181,42 +180,4 @@ async function DJSAutocomplete(interaction: AutocompleteInteraction<"cached">) {
             })),
         )
         .catch(console.error);
-}
-
-async function MDNAutocomplete(interaction: AutocompleteInteraction<"cached">) {
-    const query = interaction.options.getFocused(true).value as string;
-    const { index, sitemap } = await getSources();
-
-    // The limit for autocomplete options is 25
-    const search = index.search((query || "a"), { limit: 25 }).map((id) => {
-        const val = sitemap[<number>id].loc;
-        // Values and names have a limit of 100 characters
-        const parsed = val.length >= 99 ? val.split("/").slice(-2).join("/") : val;
-        return { name: parsed, value: parsed };
-    });
-    await interaction.respond(search).catch(console.error);
-}
-
-// NB: This function is duplicated in commands/docs/mdn.ts
-// But both files will fail if you try to import / export it.
-async function getSources(): Promise<typeof sources> {
-    try {
-        if (sources.lastUpdated && Date.now() - sources.lastUpdated < 43200000 /* 12 hours */) return sources;        
-        const res = await fetch(MDN_SITEMAP);
-        // Fallback to old sources if the new ones are not available for any reason
-        if (!res.ok) return sources;
-        const rawData = await res.text();
-        const parsedSitemap = new XMLParser().parse(rawData);
-        const sitemap: Sitemap<number> = parsedSitemap.urlset.url.map((entry: SitemapEntry<string>) => ({
-            loc: entry.loc.slice(`${MDN_BASE_URL}${MDN_DOCS_URL}`.length),
-            lastmod: new Date(entry.lastmod).valueOf(),
-        }));
-        const index = new flexsearch.Index();
-        sitemap.forEach((entry, idx) => index.add(idx, entry.loc));    
-        sources = { index, sitemap, lastUpdated: Date.now() };
-        return sources;
-    } catch (error) {
-        console.warn(`Failed to fetch mdn docs: ${error}`);
-        return sources;
-    }
 }

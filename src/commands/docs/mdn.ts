@@ -4,6 +4,7 @@ import { Command, MdnDoc } from "../../interfaces";
 import flexsearch from "flexsearch";
 import { 
     ActionRowBuilder, 
+    AutocompleteInteraction, 
     ButtonBuilder, 
     EmbedBuilder, 
     SlashCommandBuilder, 
@@ -146,8 +147,20 @@ export async function getSingleMDNSearchResults(searchQuery: string) {
         .setDescription(doc.summary);
 }
 
-// NB: This function is duplicated in handlers/InteractionCreateHandler.ts
-// But both files will fail if you try to import / export it.
+export async function MDNAutocomplete(interaction: AutocompleteInteraction<"cached">) {
+    const query = interaction.options.getFocused(true).value as string;
+    const { index, sitemap } = await getSources();
+
+    // The limit for autocomplete options is 25
+    const search = index.search((query || "a"), { limit: 25 }).map((id) => {
+        const val = sitemap[<number>id].loc;
+        // Values and names have a limit of 100 characters
+        const parsed = val.length >= 99 ? val.split("/").slice(-2).join("/") : val;
+        return { name: parsed, value: parsed };
+    });
+    await interaction.respond(search).catch(console.error);
+}
+
 async function getSources(): Promise<typeof sources> {
     try {
         if (sources.lastUpdated && Date.now() - sources.lastUpdated < 43200000 /* 12 hours */) return sources;        
