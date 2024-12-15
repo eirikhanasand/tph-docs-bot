@@ -8,6 +8,7 @@
     "tsc": "tsc",
     "start": "npm run tsc && npm run register-global-commands && node dist/bot.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint --fix ./src",
     "register-guild-commands": "cross-env REGISTER_MODE=GUILD node dist/handlers/RegisterCommands.js",
     "register-global-commands": "cross-env REGISTER_MODE=GLOBAL node dist/handlers/RegisterCommands.js",
     "reset-guild-commands": "cross-env REGISTER_MODE=RESET_GUILD node dist/handlers/RegisterCommands.js",
@@ -17,19 +18,21 @@
   "license": "ISC",
   "dependencies": {
     "discord.js": "^14.16.3",
-    "discord.js-docs": "github:eirikhanasand/discord.js-docs",
+    "discord.js-docs": "0.4.2",
     "dotenv": "^16.4.5",
     "fast-xml-parser": "^4.5.0",
     "flexsearch": "^0.7.43",
     "glob": "^11.0.0"
   },
   "devDependencies": {
+    "@stylistic/eslint-plugin-js": "^2.12.1",
     "@types/flexsearch": "^0.7.6",
     "@types/glob": "^8.1.0",
     "@types/node": "^22.10.0",
     "@typescript-eslint/parser": "^8.16.0",
     "cross-env": "^7.0.3",
     "eslint": "^9.15.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0"
   }
 }
