@@ -148,3 +148,5 @@ export function getCombinedEmbedCharacterCount(embed: APIEmbed): number {
     fieldsCharacterCount
 	);
 }
+
+// temp change to apply on top
