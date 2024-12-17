@@ -14,6 +14,7 @@ import { dirname } from "path";
 import flexsearch from "flexsearch";
 import Doc from "discord.js-docs";
 import { MDNAutocomplete } from "../commands/docs/mdn.js";
+import { DEFAULT_SEARCH_QUERY } from "../constants.js";
 
 interface SitemapEntry<T extends string | number> {
     loc: string;
@@ -148,7 +149,7 @@ async function DJSAutocomplete(interaction: AutocompleteInteraction<"cached">) {
     // Support source:query format
     // eslint-disable-next-line prefer-const
     let { Source: branchOrProject = "stable", Query: searchQuery } =
-        (query || "Client").match(/(?:(?<Source>[^:]*):)?(?<Query>(?:.|\s)*)/i)?.groups ?? {};
+        (query || DEFAULT_SEARCH_QUERY).match(/(?:(?<Source>[^:]*):)?(?<Query>(?:.|\s)*)/i)?.groups ?? {};
 
     if (!sources[branchOrProject]) branchOrProject = "stable";
 
