@@ -2,7 +2,6 @@ import { commandCooldownCheck, commandPermissionCheck } from "../utils/CommandUt
 import { glob } from "glob";
 import type { Command, MyContext } from "../interfaces.js";
 import {
-    AutocompleteInteraction,
     InteractionType,
     type ButtonInteraction,
     type CommandInteraction,
@@ -12,9 +11,8 @@ import {
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import flexsearch from "flexsearch";
-import Doc from "discord.js-docs";
 import { MDNAutocomplete } from "../commands/docs/mdn.js";
-import { DEFAULT_SEARCH_QUERY } from "../constants.js";
+import { DJSAutocomplete } from "../commands/docs/djs.js";
 
 interface SitemapEntry<T extends string | number> {
     loc: string;
@@ -132,53 +130,4 @@ async function selectMenuInteractionHandler(context: MyContext, interaction: Str
         content: "Unknown menu",
         ephemeral: true,
     }).catch(console.error);
-}
-
-async function DJSAutocomplete(interaction: AutocompleteInteraction<"cached">) {
-    const query = interaction.options.getFocused(true).value as string;
-    const sourceOption = interaction.options.getString("source") || "stable";
-
-    // Validate source and fetch documentation
-    const source = sources[sourceOption] ? sourceOption : "stable";
-    const doc = await Doc.fetch(source, { force: false });
-    if (!doc) {
-        await interaction.respond([]).catch(console.error);
-        return;
-    }
-
-    // Support source:query format
-    // eslint-disable-next-line prefer-const
-    let { Source: branchOrProject = "stable", Query: searchQuery } =
-        (query || DEFAULT_SEARCH_QUERY).match(/(?:(?<Source>[^:]*):)?(?<Query>(?:.|\s)*)/i)?.groups ?? {};
-
-    if (!sources[branchOrProject]) branchOrProject = "stable";
-
-    const singleElement = doc.get(...searchQuery.split(/\.|#/));
-    if (singleElement) {
-        await interaction
-            .respond([
-                {
-                    name: singleElement.formattedName,
-                    value: `${branchOrProject}:${singleElement.formattedName}`,
-                },
-            ])
-            .catch(console.error);
-        return;
-    }
-
-    const searchResults = doc.search(searchQuery, { excludePrivateElements: false, maxResults: 25 });
-    if (!searchResults) {
-        // Responds with no options if no results
-        await interaction.respond([]).catch(console.error);
-        return;
-    }
-
-    await interaction
-        .respond(
-            searchResults.map((elem) => ({
-                name: elem.formattedName,
-                value: `${branchOrProject}:${elem.formattedName}`,
-            })),
-        )
-        .catch(console.error);
 }

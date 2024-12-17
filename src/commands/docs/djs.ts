@@ -6,8 +6,10 @@ import {
     ActionRowBuilder, 
     StringSelectMenuBuilder,
     SlashCommandBuilder,
+    AutocompleteInteraction,
 } from "discord.js";
 import { APIEmbed, ButtonBuilder } from "discord.js";
+import { DEFAULT_SEARCH_QUERY } from "../../constants.js";
 
 const supportedBranches = Object.keys(sources).map((branch) => ({
     name: capitalize(branch),
@@ -171,6 +173,55 @@ export function searchDJSDoc(doc: Doc, query: string, searchPrivate?: boolean) {
             value: res.formattedName,
         };
     });
+}
+
+export async function DJSAutocomplete(interaction: AutocompleteInteraction<"cached">) {
+    const query = interaction.options.getFocused(true).value as string;
+    const sourceOption = interaction.options.getString("source") || "stable";
+
+    // Validate source and fetch documentation
+    const source = sources[sourceOption] ? sourceOption : "stable";
+    const doc = await Doc.fetch(source, { force: false });
+    if (!doc) {
+        await interaction.respond([]).catch(console.error);
+        return;
+    }
+
+    // Support source:query format
+    // eslint-disable-next-line prefer-const
+    let { Source: branchOrProject = "stable", Query: searchQuery } =
+        (query || DEFAULT_SEARCH_QUERY).match(/(?:(?<Source>[^:]*):)?(?<Query>(?:.|\s)*)/i)?.groups ?? {};
+
+    if (!sources[branchOrProject]) branchOrProject = "stable";
+
+    const singleElement = doc.get(...searchQuery.split(/\.|#/));
+    if (singleElement) {
+        await interaction
+            .respond([
+                {
+                    name: singleElement.formattedName,
+                    value: `${branchOrProject}:${singleElement.formattedName}`,
+                },
+            ])
+            .catch(console.error);
+        return;
+    }
+
+    const searchResults = doc.search(searchQuery, { excludePrivateElements: false, maxResults: 25 });
+    if (!searchResults) {
+        // Responds with no options if no results
+        await interaction.respond([]).catch(console.error);
+        return;
+    }
+
+    await interaction
+        .respond(
+            searchResults.map((elem) => ({
+                name: elem.formattedName,
+                value: `${branchOrProject}:${elem.formattedName}`,
+            })),
+        )
+        .catch(console.error);
 }
 
 /**

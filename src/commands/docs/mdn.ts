@@ -11,6 +11,7 @@ import {
     StringSelectMenuBuilder 
 } from "discord.js";
 import { 
+    DEFAULT_SEARCH_QUERY,
     MDN_BASE_URL, 
     MDN_COLOR, 
     MDN_DOCS_URL, 
@@ -152,7 +153,7 @@ export async function MDNAutocomplete(interaction: AutocompleteInteraction<"cach
     const { index, sitemap } = await getSources();
 
     // The limit for autocomplete options is 25
-    const search = index.search((query || "a"), { limit: 25 }).map((id) => {
+    const search = index.search((query || DEFAULT_SEARCH_QUERY), { limit: 25 }).map((id) => {
         const val = sitemap[<number>id].loc;
         // Values and names have a limit of 100 characters
         const parsed = val.length >= 99 ? val.split("/").slice(-2).join("/") : val;
